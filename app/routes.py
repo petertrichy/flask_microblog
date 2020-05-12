@@ -5,6 +5,8 @@ from flask_login import current_user, login_user, logout_user, login_required
 from app.models import User
 from datetime import datetime
 from app.forms import EditProfileForm
+from app.forms import PostForm
+from app.models import Post
 
 @app.before_request
 def before_request():
@@ -12,21 +14,19 @@ def before_request():
         current_user.last_seen = datetime.utcnow()
         db.session.commit()
 
-@app.route('/index')
+@app.route('/index', methods=['GET', 'POST'])
 @login_required
 def index():
-    user = current_user
-    posts = [
-        {
-            'author': {'username': 'John'},
-            'body': 'Beautiful day in Portland'
-        },
-        {
-            'author': {'username': 'Susan'},
-            'body': 'The Avengers movie was so cool!'
-        }
-    ]
-    return render_template('index.html', title='Home', posts=posts)   
+    form = PostForm()
+    if form.validate_on_submit():
+        post = Post(body=form.post.data, author=current_user)
+        db.session.add(post)
+        db.session.commit()
+        flash('Your post is now live!')
+    if request.method == 'POST':
+        return redirect(url_for('index'))
+    posts = current_user.followed_posts().all()
+    return render_template('index.html', title='Home', form=form, posts=posts)   
     
 @app.route('/')
 @app.route('/login', methods=['GET', 'POST'])
@@ -125,4 +125,10 @@ def unfollow(username):
     flash('You are not following {}.'.format(username))
     return redirect(url_for('user', username=username))
     
+
+@app.route('/explore')
+@login_required
+def explore():
+    posts = Post.query.order_by(Post.timestamp.desc()).all()
+    return render_template('index.html', title='Explore', posts=posts)
 
