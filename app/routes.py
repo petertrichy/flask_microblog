@@ -23,7 +23,6 @@ def index():
         db.session.add(post)
         db.session.commit()
         flash('Your post is now live!')
-    if request.method == 'POST':
         return redirect(url_for('index'))
     posts = current_user.followed_posts().all()
     return render_template('index.html', title='Home', form=form, posts=posts)   
